@@ -157,8 +157,8 @@ output:
 ###################################
 uart:
   - id: uart_pzem
-    tx_pin: GPIO18
-    rx_pin: GPIO19
+    tx_pin: GPIO19   # ESP TX -> RX du PZEM
+    rx_pin: GPIO18   # ESP RX <- TX du PZEM
     baud_rate: 9600
     stop_bits: 2
 
