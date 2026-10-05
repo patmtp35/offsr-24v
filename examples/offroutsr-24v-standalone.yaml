@@ -99,6 +99,8 @@ sun:
 button:
   - platform: restart
     name: "${sensor_prefix} - Restart Esp"
+    web_server:
+      sorting_weight: 900
 
 ###################################
 ### Composants externes (offsr patché 24V en LOCAL + gp8403, fork Seby)
@@ -269,15 +271,23 @@ switch:
     activation:
       name: ${sensor_prefix}_activation
       id: activation
+      web_server:
+        sorting_weight: 10
     manual_override:
       name: ${sensor_prefix}_manual_override
       id: manual_override
+      web_server:
+        sorting_weight: 20
     pid_mode:
       name: ${sensor_prefix}_pid_mode
       id: pid_mode
+      web_server:
+        sorting_weight: 30
     reverse:
       name: ${sensor_prefix}_reverse
       id: reverse
+      web_server:
+        sorting_weight: 40
 
 ###################################
 ### RÉGLAGES PID + seuils batterie
@@ -288,36 +298,60 @@ number:
     charging_setpoint:
       name: ${sensor_prefix}_charging_setpoint
       id: offrt_charging_setpoint
+      web_server:
+        sorting_weight: 100
     absorbing_setpoint:
       name: ${sensor_prefix}_absorbing_setpoint
       id: offrt_absorbing_setpoint
+      web_server:
+        sorting_weight: 110
     floating_setpoint:
       name: ${sensor_prefix}_floating_setpoint
       id: offrt_floating_setpoint
+      web_server:
+        sorting_weight: 120
     starting_battery_voltage:
       name: ${sensor_prefix}_starting_battery_voltage
       id: offrt_starting_battery_voltage
+      web_server:
+        sorting_weight: 60
     charged_battery_voltage:
       name: ${sensor_prefix}_charged_battery_voltage
       id: offrt_charged_battery_voltage
+      web_server:
+        sorting_weight: 80
     discharged_battery_voltage:
       name: ${sensor_prefix}_discharged_battery_voltage
       id: offrt_discharged_battery_voltage
+      web_server:
+        sorting_weight: 70
     kp:
       name: ${sensor_prefix}_kp
       id: offrt_kp
+      web_server:
+        sorting_weight: 140
     ki:
       name: ${sensor_prefix}_ki
       id: offrt_ki
+      web_server:
+        sorting_weight: 150
     kd:
       name: ${sensor_prefix}_kd
       id: offrt_kd
+      web_server:
+        sorting_weight: 160
     output_min:
       name: ${sensor_prefix}_output_min
       id: offrt_output_min
+      web_server:
+        sorting_weight: 180
     output_max:
       name: ${sensor_prefix}_output_max
       id: offrt_output_max
+      web_server:
+        sorting_weight: 190
     output_restart:
       name: ${sensor_prefix}_output_restart
       id: offrt_output_restart
+      web_server:
+        sorting_weight: 200

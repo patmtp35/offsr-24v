@@ -14,7 +14,7 @@ Dans le composant d'origine, les seuils de tension batterie sont **bornés en du
 
 | Entité | Bornes d'origine | Défaut d'origine | Bornes patchées | Défaut patché |
 |---|---|---|---|---|
-| `starting_battery_voltage` | 45–60 V | 53.0 V | 20–32 V | 25.5 V |
+| `starting_battery_voltage` | 45–60 V | 53.0 V | 20–32 V | 27.0 V |
 | `charged_battery_voltage` | 50–60 V | 55.8 V | 20–32 V | 28.0 V |
 | `discharged_battery_voltage` | 45–60 V | 55.6 V | 20–32 V | 27.6 V |
 
@@ -22,6 +22,14 @@ Sur un 24 V, les curseurs ne peuvent donc pas descendre sous 45 V. Les bornes so
 `components/offsr/number/__init__.py`, les défauts C++ dans `components/offsr/offsr.h`.
 
 Les consignes en ampères (`charging/absorbing/floating_setpoint`) ne sont pas liées à la tension et ne sont pas modifiées.
+
+### Choix des seuils pour un gel 24 V
+
+- `starting` : 27.0 V. Une batterie pleine au repos est à ~25.8 V ; à 27.0 V le chargeur travaille réellement.
+- `discharged` : 27.6 V (floating d'un gel 24 V, 13.8 V × 2).
+- `charged` : tension d'absorption du chargeur − 0.2 V (28.0 V pour une absorption à 28.2 V).
+- Un seuil `charged` trop bas fait voler au routeur le courant de fin de charge : l'absorption n'est jamais terminée, ce qui use vite un gel.
+- Si ton chargeur compense en température, son absorption monte en hiver (~−48 mV/°C en 24 V) : revois `charged` à la hausse.
 
 **Les défauts 24 V sont des points de départ prudents, pas des valeurs validées.** Ils sont à régler
 selon la chimie et l'état de ta batterie (le test a été fait avec un pack gel de plus de 10 ans) :
