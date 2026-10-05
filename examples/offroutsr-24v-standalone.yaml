@@ -1,0 +1,323 @@
+##################################
+# V2.6-PROD - OffGrid Routeur STANDALONE (sans HA, sans .commonv2.yaml)
+# Batterie 24 V + LSA (0–10 V via GP8403) — SmartShunt en Bluetooth
+##################################
+# Exemple : routeur solaire off-grid STANDALONE, batterie 24 V, SmartShunt en BLE
+# Composant offsr patché 24 V (voir README du dépôt), à placer dans components/offsr/
+# Secrets attendus dans secrets.yaml : wifi_ssid, wifi_password, ota_pswd, api_key,
+#   ip_offsr, ip_gateway, ip_dns, smartshunt500a_mac, smartshunt500a_key
+##################################
+
+substitutions:
+  name: "offroutsr-esp"
+  esphome_name: "OffRoutSr-Esp"
+  friendly_name: "OffGrid Routeur Standalone"
+
+  sensor_prefix: "offsrt"
+
+  device_description: "Prod Routeur Offgrid - 24 V Gel + LSA - 100% standalone"
+  time_timezone: "Europe/Paris"
+  projectname: "Pat.OffSrT"
+  appversion: "2.6-standalone"
+
+  log_level: "VERBOSE"
+  baud_ratelog: "0"
+
+  ota_pswd: !secret ota_pswd
+
+  adress_ip: !secret ip_offsr
+  gateway_ip: !secret ip_gateway
+  dns_ip: !secret ip_dns
+
+esp32:
+  board: esp32dev
+  framework:
+    type: esp-idf
+    version: recommended
+
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+  comment: ${device_description}
+  project:
+    name: ${projectname}
+    version: ${appversion}
+
+###################################
+### Réseau, API, OTA, logs, divers — repris tel quel de commonv2.yaml
+### (juste inlinés, plus de fichier externe)
+###################################
+wifi:
+  networks:
+    - ssid: !secret wifi_ssid
+      password: !secret wifi_password
+      priority: 0
+      ### maison
+
+  manual_ip:
+    static_ip: ${adress_ip}
+    gateway: ${gateway_ip}
+    subnet: 255.255.255.0
+    dns1: ${dns_ip}
+  ap:
+    password: !secret ota_pswd
+  min_auth_mode: WPA2
+
+mdns:
+  disabled: false
+
+logger:
+  level: ${log_level}
+  baud_rate: ${baud_ratelog}
+
+api:
+  encryption:
+    key: !secret api_key
+
+captive_portal:
+
+ota:
+  - platform: esphome
+
+web_server:
+  local: true
+  port: 80
+  version: 3
+
+# Heure locale sans dépendance HA (seul écart volontaire vs commonv2 :
+# remplace platform: ${time_platform} / id: ${time_id})
+time:
+  - platform: sntp
+    id: sntp_time
+    timezone: ${time_timezone}
+
+# Position solaire (utile seulement si tu utilises le soleil dans tes automatisations)
+sun:
+  latitude: 0.000000   # <-- METS TES COORDONNEES
+  longitude: 0.000000  # <-- METS TES COORDONNEES
+
+button:
+  - platform: restart
+    name: "${sensor_prefix} - Restart Esp"
+
+###################################
+### Composants externes (offsr patché 24V en LOCAL + gp8403, fork Seby)
+###################################
+# offsr : version patchée pour pack 24V (bornes/valeurs par défaut de
+# starting/charged/discharged_battery_voltage recalées, cf. offsr-24v/).
+# À placer dans un dossier "components/offsr/" à côté de ce yaml.
+# Le composant original de Seby a ces 3 seuils bornés en dur 45-60V
+# (calibré pour son propre pack ~48V) : inutilisable tel quel en 24V.
+external_components:
+  - source:
+      type: local
+      path: components
+    components: [offsr]
+
+  - source: "github://SeByDocKy/myESPhome/"
+    components: [gp8403]
+    refresh: 0s
+
+  # Lecteur Bluetooth (protocole d'annonce) du SmartShunt Victron
+  - source: github://Fabian-Schmidt/esphome-victron_ble
+    refresh: 0s
+
+###################################
+### Bus I2C pour GP8403
+###################################
+i2c:
+  - id: i2c_bus
+    sda: GPIO22
+    scl: GPIO21
+    scan: true
+    frequency: 800kHz
+
+gp8403:
+  - id: gp8403_id
+    voltage: 10V
+    i2c_id: i2c_bus
+    # Corrigé : ton scan I2C au boot trouve le module à 0x5F, pas 0x58
+    # (log : "Found device at address 0x5F" vs "gp8403 Address: 0x58" ->
+    # NACK sur chaque écriture DAC, sortie figée à 0).
+    address: 0x5F
+    gp8413: true
+
+output:
+  - platform: gp8403
+    gp8403_id: gp8403_id
+    id: output_gp8403
+    channel: 0
+
+###################################
+### UART -> PZEM (RS485/Modbus) : puissance réelle injectée dans le
+### ballon, utilisée pour détecter une coupure du thermostat mécanique
+### (le SmartShunt, lui, n'est plus câblé : voir bloc Bluetooth ci-dessous)
+###################################
+uart:
+  - id: uart_pzem
+    tx_pin: GPIO18
+    rx_pin: GPIO19
+    baud_rate: 9600
+    stop_bits: 2
+
+modbus:
+  id: modbus2
+  uart_id: uart_pzem
+
+###################################
+### Bluetooth -> SmartShunt (protocole d'annonce Victron, sans fil)
+### mac_address / bindkey : à récupérer dans VictronConnect puis à
+### mettre dans secrets.yaml (pas en clair ici)
+###################################
+esp32_ble_tracker:
+
+victron_ble:
+  - id: smartshunt_ble
+    mac_address: !secret smartshunt500a_mac
+    bindkey: !secret smartshunt500a_key
+
+###################################
+### OffSR : cœur du routeur PV → LSA
+###################################
+offsr:
+  - id: my_offsr1
+    battery_current_id: bc_smoothed
+    battery_voltage_id: bv
+    output_id: output_gp8403
+    power_id: pzem_power
+
+###################################
+### Binary sensors
+###################################
+binary_sensor:
+  - platform: offsr
+    offsr_id: my_offsr1
+    thermostat_cut:
+      name: ${sensor_prefix}_thermostat_cut
+
+  - platform: status
+    name: "${sensor_prefix} - Status Esp"
+
+###################################
+### SENSORS
+###################################
+sensor:
+  - platform: offsr
+    offsr_id: my_offsr1
+    error:
+      name: ${sensor_prefix}_regulation_error
+    output:
+      name: ${sensor_prefix}_output_value
+      accuracy_decimals: 3
+    target:
+      name: ${sensor_prefix}_target_current
+
+  # SmartShunt en Bluetooth (protocole d'annonce Victron) — timeout
+  # à 120s : si aucune trame reçue pendant 2 min, passe à NAN plutôt
+  # que de garder une valeur figée.
+  - platform: victron_ble
+    victron_ble_id: smartshunt_ble
+    name: ${sensor_prefix}_battery_voltage
+    id: bv
+    type: BATTERY_VOLTAGE
+    filters:
+      - timeout: 120s
+
+  - platform: victron_ble
+    victron_ble_id: smartshunt_ble
+    name: ${sensor_prefix}_battery_current
+    id: bc_raw
+    type: BATTERY_CURRENT
+    filters:
+      - timeout: 120s
+
+  - platform: wifi_signal
+    name: ${sensor_prefix}_wifi_signal
+    id: wifi_power
+    update_interval: 5s
+
+  - platform: uptime
+    id: uptime_sec
+
+  # Smoothing du courant batterie (obligatoire pour un PID stable),
+  # rebranché sur la vraie mesure SmartShunt (bc_raw)
+  - platform: copy
+    source_id: bc_raw
+    name: ${sensor_prefix}_battery_current_smoothed
+    id: bc_smoothed
+    filters:
+      - sliding_window_moving_average:
+          window_size: 5
+
+  # Puissance réellement injectée dans le ballon (détection coupure
+  # thermostat, cf. binary_sensor thermostat_cut)
+  - platform: pzemac
+    address: 1
+    modbus_id: modbus2
+    power:
+      name: ${sensor_prefix}_power_feedback
+      unit_of_measurement: W
+      accuracy_decimals: 1
+      id: pzem_power
+
+###################################
+### SWITCHS OFFSR
+###################################
+switch:
+  - platform: offsr
+    offsr_id: my_offsr1
+    activation:
+      name: ${sensor_prefix}_activation
+      id: activation
+    manual_override:
+      name: ${sensor_prefix}_manual_override
+      id: manual_override
+    pid_mode:
+      name: ${sensor_prefix}_pid_mode
+      id: pid_mode
+    reverse:
+      name: ${sensor_prefix}_reverse
+      id: reverse
+
+###################################
+### RÉGLAGES PID + seuils batterie
+###################################
+number:
+  - platform: offsr
+    offsr_id: my_offsr1
+    charging_setpoint:
+      name: ${sensor_prefix}_charging_setpoint
+      id: offrt_charging_setpoint
+    absorbing_setpoint:
+      name: ${sensor_prefix}_absorbing_setpoint
+      id: offrt_absorbing_setpoint
+    floating_setpoint:
+      name: ${sensor_prefix}_floating_setpoint
+      id: offrt_floating_setpoint
+    starting_battery_voltage:
+      name: ${sensor_prefix}_starting_battery_voltage
+      id: offrt_starting_battery_voltage
+    charged_battery_voltage:
+      name: ${sensor_prefix}_charged_battery_voltage
+      id: offrt_charged_battery_voltage
+    discharged_battery_voltage:
+      name: ${sensor_prefix}_discharged_battery_voltage
+      id: offrt_discharged_battery_voltage
+    kp:
+      name: ${sensor_prefix}_kp
+      id: offrt_kp
+    ki:
+      name: ${sensor_prefix}_ki
+      id: offrt_ki
+    kd:
+      name: ${sensor_prefix}_kd
+      id: offrt_kd
+    output_min:
+      name: ${sensor_prefix}_output_min
+      id: offrt_output_min
+    output_max:
+      name: ${sensor_prefix}_output_max
+      id: offrt_output_max
+    output_restart:
+      name: ${sensor_prefix}_output_restart
+      id: offrt_output_restart

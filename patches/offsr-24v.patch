@@ -1,0 +1,52 @@
+diff -ruN a/components/offsr/number/__init__.py b/components/offsr/number/__init__.py
+--- a/components/offsr/number/__init__.py	2026-10-05 14:28:05.722955154 +0200
++++ b/components/offsr/number/__init__.py	2026-10-05 14:28:06.500603526 +0200
+@@ -157,24 +157,27 @@
+         cg.add(offsr_component.set_floating_setpoint_number(n))     
+         
+   if starting_battery_voltage_config := config.get(CONF_STARTING_BATTERY_VOLTAGE):
++        # Patché pour pack 24V (était 45.0-60.0, calibré pour ~48V chez Seby)
+         n = await number.new_number(
+-            starting_battery_voltage_config, min_value=45.0, max_value=60.0, step=0.1
++            starting_battery_voltage_config, min_value=20.0, max_value=32.0, step=0.1
+         )
+         await cg.register_component(n, starting_battery_voltage_config)
+         await cg.register_parented(n, offsr_component)
+         cg.add(offsr_component.set_starting_battery_voltage_number(n))
+ 
+   if charged_battery_voltage_config := config.get(CONF_CHARGED_BATTERY_VOLTAGE):
++        # Patché pour pack 24V (était 50.0-60.0)
+         n = await number.new_number(
+-            charged_battery_voltage_config, min_value=50.0, max_value=60.0, step=0.1
++            charged_battery_voltage_config, min_value=20.0, max_value=32.0, step=0.1
+         )
+         await cg.register_component(n, charged_battery_voltage_config)
+         await cg.register_parented(n, offsr_component)
+         cg.add(offsr_component.set_charged_battery_voltage_number(n))
+ 
+   if discharged_battery_voltage_config := config.get(CONF_DISCHARGED_BATTERY_VOLTAGE):
++        # Patché pour pack 24V (était 45.0-60.0)
+         n = await number.new_number(
+-            discharged_battery_voltage_config, min_value=45.0, max_value=60.0, step=0.1
++            discharged_battery_voltage_config, min_value=20.0, max_value=32.0, step=0.1
+         )
+         await cg.register_component(n, discharged_battery_voltage_config)
+         await cg.register_parented(n, offsr_component)
+diff -ruN a/components/offsr/offsr.h b/components/offsr/offsr.h
+--- a/components/offsr/offsr.h	2026-10-05 14:28:05.723443161 +0200
++++ b/components/offsr/offsr.h	2026-10-05 14:28:09.672603493 +0200
+@@ -168,9 +168,11 @@
+   float current_absorbing_setpoint_ = 5.0f;
+   float current_floating_setpoint_ = 0.0f;
+   
+-  float current_starting_battery_voltage_ = 53.0f;
+-  float current_charged_battery_voltage_ = 55.8f;
+-  float current_discharged_battery_voltage_ = 55.6f;
++  // Patché pour pack 24V gel (défauts prudents, à affiner avec la tension
++  // réelle à vide mesurée sur site au Tarn) :
++  float current_starting_battery_voltage_ = 25.5f;
++  float current_charged_battery_voltage_ = 28.0f;
++  float current_discharged_battery_voltage_ = 27.6f;
+   
+   float current_kp_ = 4.0f;
+   float current_ki_ = 0.0f;
