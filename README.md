@@ -64,25 +64,20 @@ ESP32 DevKit (esp32dev) · DFRobot Gravity GP8403/GP8413 (DAC I2C 0-10 V) · Lon
 
 - **Adresse I2C du GP8403** : mon module Gravity apparaît à `0x5F`, pas à `0x58`. Lance un scan I2C
   (`i2c: scan: true`) ; sinon : `not acked` à chaque écriture et sortie à 0.
-- **`manual_override` n'est pas une marche forcée.** Dans `pid_update()`, tout le calcul PID et l'écriture de la sortie
-  sont dans `if (!manual_override_)` : activé, la sortie reste **figée** à sa dernière valeur. Pour forcer une sortie de test :
-  `activation` ON, `manual_override` OFF, et monter `output_min`.
 - **`output_min` / `output_max` / `output_restart`** sont de simples valeurs de départ (0.18 / 0.85 / 0.4 dans `offsr.h`),
   réglables 0–1 et mémorisées en flash. La zone morte de conduction dépend du LSA et de la charge : à mesurer.
-- **PZEM** : trois liaisons distinctes — le CT, le 220 V sur ses bornes L/N (il s'alimente et mesure la tension par là),
+- **PZEM** : deux liaisons distinctes —  le 220 V sur ses bornes L/N (il s'alimente et mesure la tension par là),
   et la liaison TTL. Sur la TTL : **TX ESP32 → RX PZEM, RX ESP32 → TX PZEM**, et **le 5 V du connecteur TTL doit être
   câblé** : sans lui, le Modbus renvoie des octets aléatoires (`0x80`, `0x00`…) puis des timeouts.
   Le PZEM se place côté **entrée** du LSA (avant le découpage), comme sur les schémas de Seby.
-- **CT** : une pince SCT-013/SCT-T16 n'est pas calibrée pour le PZEM : la communication marche, la valeur de puissance
-  est fausse. Utiliser le CT fourni avec le PZEM (ou un modèle compatible).
 - `power_mini` (seuil de détection de coupure thermostat) est fixé à 2 W dans `offsr.cpp`.
 
 ## Limites / non testé
 
 - Pas encore validé sur batterie 24 V réelle ni sur la charge finale (ballon 1200 W) ; PID (kp/ki/kd) réglé sur
   ampoule / radiateur bain d'huile.
-- Détection `thermostat_cut` non testée avec un CT correct.
-- Je n'ai pas vérifié si le LSA intègre un snubber RC.
+- Détection `thermostat_cut` non testée encore
+
 
 ## Licence
 
