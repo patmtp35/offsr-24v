@@ -150,6 +150,19 @@ output:
     id: output_gp8403
     channel: 0
 
+# Commande manuelle de la puissance (curseur 0-100 %), a utiliser UNIQUEMENT
+# avec manual_override = ON (offsr n'ecrit alors plus la sortie).
+# Garder activation = ON, ne pas toucher au curseur hors manual_override.
+fan:
+  - platform: speed
+    id: manual_power
+    name: ${sensor_prefix}_manual_power
+    output: output_gp8403
+    speed_count: 100
+    restore_mode: ALWAYS_OFF   # jamais de sortie forcee au demarrage
+    web_server:
+      sorting_weight: 25
+
 ###################################
 ### UART -> PZEM (RS485/Modbus) : puissance réelle injectée dans le
 ### ballon, utilisée pour détecter une coupure du thermostat mécanique

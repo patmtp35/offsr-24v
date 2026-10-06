@@ -92,3 +92,13 @@ ESP32 DevKit (esp32dev) · DFRobot Gravity GP8403/GP8413 (DAC I2C 0-10 V) · Lon
 Le dépôt amont n'a pas de fichier de licence au moment de ce patch : les droits sur le composant restent à son auteur.
 Ce dépôt ne contient que le patch et la documentation, publiés par leur auteur sous licence MIT (voir `LICENSE`).
 Si Seby ajoute une licence ou préfère que le patch soit intégré directement, une pull request est la meilleure voie.
+
+## Commande manuelle de la puissance
+
+`manual_override` ne force pas une marche : il gèle la régulation (offsr n'écrit plus la sortie). Pour piloter la puissance à la main, l'exemple déclare un `fan` (platform `speed`) branché sur la même sortie, comme le suggère le code d'origine de SeByDocKy (bloc `fan:` commenté).
+
+1. `manual_override` ON, `activation` ON.
+2. Régler le curseur `manual_power` (0-100 %).
+3. Retour en auto : curseur à 0 / OFF, puis `manual_override` OFF.
+
+Attention : en manuel, plus aucune protection batterie n'agit, et le curseur ne doit pas être utilisé hors `manual_override` (deux écritures sur la même sortie).
